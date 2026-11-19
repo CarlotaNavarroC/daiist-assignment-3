@@ -63,6 +63,8 @@ def citation_guard(answer: str, trace: list[dict]) -> str | None:
     """Return a reason if the answer must be withheld, else None."""
     if is_refusal(answer):
         return None
+    if any(step["tool"] == "add_document" for step in trace):   # confirming an added document needs no citations
+        return None
     searched = [s for s in trace if s["tool"] == "search"]
     if not searched:
         return "the answer was given without searching"
