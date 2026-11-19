@@ -30,7 +30,7 @@ from typing import Callable
 from api_key import load_api_key
 
 ROOT = Path(__file__).resolve().parent
-MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")   #any Gemini chat model the key can use
+MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.5-flash-lite")   #any Gemini chat model the key can use
 MAX_TOOL_CALLS = 6
 REFUSAL_PHRASE = "The indexed documents do not cover this."
 
@@ -131,7 +131,7 @@ async def _ask(question: str, approve: Callable[[str], bool]) -> dict:
     async with AsyncExitStack() as stack:
         tools = await open_tools(stack, trace, approve)
         agent = create_agent(
-            ChatGoogleGenerativeAI(model=MODEL, temperature=0),
+            ChatGoogleGenerativeAI(model=MODEL),
             tools,
             system_prompt=load_system_prompt(),
             middleware=[ToolCallLimitMiddleware(run_limit=MAX_TOOL_CALLS, exit_behavior="continue")],
