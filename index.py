@@ -21,6 +21,7 @@ open_collection, CHOSEN_DESIGN.
 from __future__ import annotations
 
 import hashlib
+import os
 import re
 import sys
 import time
@@ -34,7 +35,7 @@ from api_key import load_api_key
 
 ROOT = Path(__file__).resolve().parent
 CORPUS_DIR = ROOT / "corpus"
-INDEX_DIR = ROOT / "index"
+INDEX_DIR = Path(os.environ.get("CORPUS_INDEX_DIR") or ROOT / "index")
 
 EMBED_MODEL = "gemini-embedding-2"
 EMBED_BATCH = 50          # texts per API call (each text counts for the quota)
