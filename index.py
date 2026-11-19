@@ -45,13 +45,13 @@ ARTICLE_MAX_WORDS = 350   # split an article only above this size
 DESIGNS = ("article", "fixed")
 CHOSEN_DESIGN = "article"  # the design server.py searches and adds to; change after evaluate.py
 
-# stem -> (label used as `source`, EUR-Lex URL). Anything else is added later via add_document.
+#stem -> (label used as `source`, EUR-Lex URL). Anything else is added later via add_document.
 CORPUS = {
     "gdpr": ("GDPR", "https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32016R0679"),
     "data_act": ("Data Act", "https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32023R2854"),
     "dga": ("Data Governance Act", "https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32022R0868"),
 }
-# Held back for the "add a document" demo (not downloaded by `main.py index`).
+#Held back for the "add a document" demo (not downloaded by `main.py index`).
 EXTRA = {
     "free_flow": ("Free Flow of Non-Personal Data Regulation",
                   "https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32018R1807"),
@@ -63,7 +63,7 @@ def log(*args) -> None:
     print(*args, file=sys.stderr, flush=True)   # stdout is reserved for the MCP protocol in server.py
 
 
-# --------------------------------------------------------------------------- download
+#download
 
 def download(stem: str, url: str) -> Path:
     CORPUS_DIR.mkdir(exist_ok=True)
@@ -78,7 +78,7 @@ def download(stem: str, url: str) -> Path:
     return path
 
 
-# --------------------------------------------------------------------------- extraction
+#extraction
 
 def _clean(text: str) -> str:
     return re.sub(r"\s+", " ", text.replace("\xa0", " ")).strip()
@@ -166,7 +166,7 @@ def load_document(path: Path) -> list[dict]:
     return parse_generic(path)
 
 
-# --------------------------------------------------------------------------- chunking
+#chunking
 
 def _wc(text: str) -> int:
     return len(text.split())
@@ -238,7 +238,7 @@ def chunk_file(path: str | Path, design: str = CHOSEN_DESIGN) -> list[dict]:
     return chunk_article_design(source, units)
 
 
-# --------------------------------------------------------------------------- embedding + storage
+#embedding + storage
 
 _client = None
 
@@ -361,7 +361,7 @@ def add_file(path: str | Path) -> str:
     return f"{verb} '{source}': {len(chunks)} chunks ({added} newly embedded, {len(stale)} outdated removed)."
 
 
-# --------------------------------------------------------------------------- main
+#main
 
 def corpus_words(paths: list[Path]) -> None:
     total = 0
