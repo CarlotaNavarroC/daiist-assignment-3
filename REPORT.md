@@ -1,4 +1,4 @@
-# Assignment 3 Report
+ # Assignment 3 Report
 
 - **Name**: Carlota Navarro Calle
 - **Student ID**: 19992
@@ -6,18 +6,7 @@
 
 ## Use case
 
-The assistant is for compliance officers and startup founders in the EU who
-need to know what the GDPR, the Data Act and the Data Governance Act require,
-for example how fast a data breach must be reported or when a cloud contract
-must let a customer switch provider. They use the answer to decide what to do:
-set up an internal process, write a contract clause, or check whether a product
-feature is allowed. A wrong answer is expensive, because a wrong deadline or a
-missed condition can lead to a fine of up to EUR 20 million or 4% of worldwide
-annual turnover (GDPR, Article 83), or to building a product that is not
-allowed. "I don't know" is the cheaper error: it costs the user one lookup,
-because they can open the article themselves or ask a lawyer. That is why the
-assistant is built to say "The indexed documents do not cover this" rather
-than guess.
+The assistant is for compliance officers and startup founders in the EU who need to know what the GDPR, the Data Act and the Data Governance Act require, for example how fast a data breach must be reported or when a cloud contract must let a customer switch provider. They use the answer to decide what to do: set up an internal process, write a contract clause, or check whether a product feature is allowed. A wrong answer is expensive, because a wrong deadline or a missed condition can lead to a fine of up to EUR 20 million or 4% of worldwide annual turnover (GDPR, Article 83), or to building a product that is not allowed. "I don't know" is the cheaper error: it costs the user one lookup, because they can open the article themselves or ask a lawyer. That is why the assistant is built to say "The indexed documents do not cover this" rather than guess.
 
 ## Corpus
 
@@ -28,12 +17,7 @@ than guess.
 | Data Governance Act, Regulation (EU) 2022/868 | https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32022R0868 | 30 May 2022 | 15,067 |
 | **Total** | | | **67,253** |
 
-Licence: all three documents were downloaded from EUR-Lex as published in the
-Official Journal. The EUR-Lex copyright notice states: "The Commission's
-document reuse policy is based on Decision 2011/833/EU. Unless otherwise
-specified, you can re-use the legal documents published in EUR-Lex for
-commercial or non-commercial purposes." (EUR-Lex, Copyright notice, accessed
-21 November 2026).
+Licence: all three documents were downloaded from EUR-Lex as published in the Official Journal. The EUR-Lex copyright notice states: "The Commission's document reuse policy is based on Decision 2011/833/EU. Unless otherwise specified, you can re-use the legal documents published in EUR-Lex for commercial or non-commercial purposes." (EUR-Lex, Copyright notice, accessed 21 November 2026).
 
 A fourth document, the Free Flow of Non-Personal Data Regulation (2018/1807), was kept out of the index on purpose for the add-document demo.
 
@@ -50,7 +34,6 @@ two reasons. First, they only explain why the law was written and are not bindin
 
 To create the test set, I first asked an AI to summarise the main points of each document to get an overview, then wrote the questions and
 reference answers from the articles themselves.
-
 
 Question counts: **37 questions: 19 single, 10 multi (two passages), 8 unanswerable.** The unanswerable ones stay close to the topic (AI Act high-risk rules, cookies, Cyber Resilience Act, Digital Services Act, national penalties, invoice retention, a specific Spanish fine, data localisation).
 
@@ -70,7 +53,9 @@ A hit means the expected source and article are among the top k chunks; for mult
 
 By kind: article single 0.947 / 0.947 / 1.000, multi 0.000 / 0.800 / 0.800; fixed single 1.000 / 1.000 / 1.000, multi 0.100 / 0.800 / 0.800.
 
-**Chosen design: `article`.** TODO (your reasoning, in your words). Points you decided on: the `fixed` score is favoured by the hit rule, because a 200-word window often spans several articles and counts as a hit for any of them; a `fixed` chunk would be cited under only its first article, which makes citations imprecise, and precise citations matter here; on the other side, `fixed` puts fewer words in the prompt (600 against 823 at k=3). Also note that the hit rate is measured at article level, so it slightly overstates real retrieval when an article is split into parts (q19).
+**Chosen design: `article`.** I chose `article` even though `fixed` scores slightly higher on the hit rate and uses slightly fewer words in the prompt. This is because `fixed` is  favoured by the way a hit is counted: a 200-word window often covers several articles, so it counts as a hit for any of them, while an `article` chunk can only match its own article. Also, a `fixed` chunk would be cited under only its first article, even if the sentence the agent used comes from the next one, and a user who opens the wrong article cannot check the answer. 
+
+Also a limitation is that the hit rate is measured per article, so it slightly overstates real retrieval when an article is split into parts, e.g: for q19 the right article was found, but not the part that contained the answer.
 
 ## Tools and subagent
 
@@ -155,22 +140,11 @@ How to work:
 Keep the reply short: the answer, the citations, nothing else.
 ```
 
-**Transcript from Claude Code** (VS Code, Codespaces), exported with `/export`, unmodified:
+**Transcript from Claude Code** (VS Code, Codespaces), exported with `/export`:
 ```
 ▛███▛█   Claude Code v2.1.330
 ▝▜██████▀  Opus 5.5 · Claude Enterprise
  ▝▝   ▝▝   /workspaces/daiist-assignment-3
-
-
-❯ /agents                                                                       
-  ⎿  The /agents wizard has been removed.
-
-     Ask Claude to create or update subagents for you (e.g. "create a code-reviewer subagent that ..."),
-     or edit the files directly:
-       • .claude/agents/       (this project)
-       • ~/.claude/agents/     (all projects)
-
-     Docs: https://code.claude.com/docs/en/sub-agents
 
 ❯ Use the corpus-researcher subagent to find out how quickly a personal data    
   breach must be reported.                                                      
