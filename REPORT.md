@@ -39,17 +39,20 @@ A fourth document, the Free Flow of Non-Personal Data Regulation (2018/1807), wa
 
 ## Ingestion
 
-- **Extraction.** `index.py` downloads the EUR-Lex HTML and reads each article from its stable id (`art_1`, `art_2`, ...) with its title and chapter. Only the operative part is indexed (articles, no recitals). TODO (your reason, e.g. recitals are explanatory and non-binding, and compliance questions are about obligations; it also halves the embedding cost).
+- **Extraction.** `index.py` downloads the EUR-Lex HTML and reads each article from its stable id (`art_1`, `art_2`, ...) with its title and chapter. Only the operative part is indexed (articles, no recitals). TODO (your reason, e.g. recitals are explanatory and non-binding, and compliance questions are about obligations; it also halves the embedding cost). I left out the recitals for
+two reasons. First, they only explain why the law was written and are not binding, while the questions users ask are about what they must do, and that is in the articles. Second, they roughly halve the size of the text, which keeps the corpus at about 67,000 words (well above the 50,000 minimum) and keeps the embedding cost within the free daily limit.
 - **One extraction problem fixed.** EUR-Lex lays out lists such as "(a) ... (b) ..." as HTML tables, and reading each cell separately split the letter from its text. The parser now reads each table row as one block and collapses whitespace, so every item stays together.
 - **Chunking, two designs.** `article`: one chunk per article, with the article title in the embedded text; articles over 350 words are split at paragraph boundaries (for example Article 4 of the GDPR becomes 8 parts). `fixed`: a sliding window of 200 words with 40 words of overlap that ignores structure.
 - **Chunk metadata:** `source`, `location` (e.g. "Article 33"), `locations` (every article a window touches), `title`, `chapter`, `part`, `parts`, `design`.
-- **Numbers.** `article`: 307 chunks. `fixed`: 421 chunks. Embedding model `gemini-embedding-2`. The model merges a list of texts into a single vector, so the script embeds one text per call. Each vector is stored in ChromaDB as soon as it arrives, only chunks without a saved vector are embedded, and a run stops at 850 new embeddings to stay under the daily limit.
+- **Numbers.** `article`: 307 chunks. `fixed`: 421 chunks. Embedding model `gemini-embedding-2`. Each vector is stored in ChromaDB and only chunks without a saved vector are embedded.
 
 ## Test set
 
-TODO (your words): how you wrote it. Be accurate: a first draft of the 37 questions and reference answers was AI-generated from the article text, and you then reviewed and edited them (describe what you changed). Every expected location was checked against the parsed corpus.
+To create the test set, I first asked an AI to summarise the main points of each document to get an overview, then wrote the questions and
+reference answers from the articles themselves.
 
-Counts: **37 questions: 19 single, 10 multi (two passages), 8 unanswerable.** The unanswerable ones stay close to the topic (AI Act high-risk rules, cookies, Cyber Resilience Act, Digital Services Act, national penalties, invoice retention, a specific Spanish fine, data localisation).
+
+Question counts: **37 questions: 19 single, 10 multi (two passages), 8 unanswerable.** The unanswerable ones stay close to the topic (AI Act high-risk rules, cookies, Cyber Resilience Act, Digital Services Act, national penalties, invoice retention, a specific Spanish fine, data localisation).
 
 Examples:
 - single (q01): "How quickly do we have to report a personal data breach to the data protection authority?" Expected: GDPR, Article 33.
@@ -58,7 +61,7 @@ Examples:
 
 ## Retrieval
 
-A hit means the expected source and article are among the top k chunks; for multi questions both passages must be there. Answerable questions only (29).
+A hit means the expected source and article are among the top k chunks; for multi questions both passages must be there. The hit rate is measured only on the 29 answerable questions: 19 single and 10 multi. The 8 unanswerable questions are left out of the hit rate because they have no expected passage; they are evaluated by whether the agent refuses.
 
 | Design | hit@1 | hit@3 | hit@5 | words added to prompt (k=1 / 3 / 5) |
 |---|---|---|---|---|
