@@ -6,7 +6,7 @@
 
 ## Use case
 
-The assistant is for compliance officers and startup founders in the EU who need to know what the GDPR, the Data Act and the Data Governance Act require, for example how fast a data breach must be reported or when a cloud contract must let a customer switch provider. They use the answer to decide what to do: set up an internal process, write a contract clause, or check whether a product feature is allowed. A wrong answer is expensive, because a wrong deadline or a missed condition can lead to a fine of up to EUR 20 million or 4% of worldwide annual turnover (GDPR, Article 83), or to building a product that is not allowed. "I don't know" is the cheaper error: it costs the user one lookup, because they can open the article themselves or ask a lawyer. That is why the assistant is built to say "The indexed documents do not cover this" rather than guess.
+The assistant is for compliance officers and startup founders in the EU who need to know what the GDPR, the Data Act and the Data Governance Act require, for example how fast a data breach must be reported or when a cloud contract must let a customer switch provider. They use the answer to decide what to do: set up an internal process, write a contract clause, or check whether a product feature is allowed. A wrong answer is expensive, because a wrong deadline or a missed condition can lead to a fine of up to EUR 20 million or 4% of worldwide annual turnover (GDPR, Article 83), or to building a product that is not allowed. "I don't know" is the cheaper error as it costs the user one lookup, opening the article themselves or asking a lawyer. That is why the assistant is built to say "The indexed documents do not cover this" rather than guess.
 
 ## Corpus
 
@@ -17,9 +17,12 @@ The assistant is for compliance officers and startup founders in the EU who need
 | Data Governance Act, Regulation (EU) 2022/868 | https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32022R0868 | 30 May 2022 | 15,067 |
 | **Total** | | | **67,253** |
 
-Licence: all three documents were downloaded from EUR-Lex as published in the Official Journal. The EUR-Lex copyright notice states: "The Commission's document reuse policy is based on Decision 2011/833/EU. Unless otherwise specified, you can re-use the legal documents published in EUR-Lex for commercial or non-commercial purposes." (EUR-Lex, Copyright notice, accessed 21 November 2026).
+A fourth document, the Free Flow of Non-Personal Data Regulation (2018/1807), was kept out of the index on purpose for the add-document demo. 
+- URL: https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32018R1807
+- Date: 14 November 2018
+- Word count ≈ 2,100 words
 
-A fourth document, the Free Flow of Non-Personal Data Regulation (2018/1807), was kept out of the index on purpose for the add-document demo.
+Licence: all four documents were downloaded from EUR-Lex as published in the Official Journal. The EUR-Lex copyright notice states: "The Commission's document reuse policy is based on Decision 2011/833/EU. Unless otherwise specified, you can re-use the legal documents published in EUR-Lex for commercial or non-commercial purposes." (EUR-Lex, Copyright notice, accessed 21 November 2026).
 
 ## Ingestion
 
@@ -27,14 +30,14 @@ A fourth document, the Free Flow of Non-Personal Data Regulation (2018/1807), wa
 - **One extraction problem fixed.** EUR-Lex lays out lists such as "(a) ... (b) ..." as HTML tables, and reading each cell separately split the letter from its text. The parser now reads each table row as one block and collapses whitespace, so every item stays together.
 - **Chunking, two designs.** `article`: one chunk per article, with the article title in the embedded text; articles over 350 words are split at paragraph boundaries (for example Article 4 of the GDPR becomes 8 parts). `fixed`: a sliding window of 200 words with 40 words of overlap that ignores structure.
 - **Chunk metadata:** `source`, `location` (e.g. "Article 33"), `locations` (every article a window touches), `title`, `chapter`, `part`, `parts`, `design`.
-- **Numbers.** `article`: 307 chunks. `fixed`: 421 chunks. Embedding model `gemini-embedding-2`. Each vector is stored in ChromaDB and only chunks without a saved vector are embedded.
+- **Number of chunks.** `article`: 307 chunks. `fixed`: 421 chunks. Embedding model `gemini-embedding-2`. Each vector is stored in ChromaDB.
 
 ## Test set
 
 To create the test set, I first asked an AI to summarise the main points of each document to get an overview, then wrote the questions and
 reference answers from the articles themselves.
 
-Question counts: **37 questions: 19 single, 10 multi (two passages), 8 unanswerable.** The unanswerable ones stay close to the topic (AI Act high-risk rules, cookies, Cyber Resilience Act, Digital Services Act, national penalties, invoice retention, a specific Spanish fine, data localisation).
+**Question counts**: 37 questions: 19 single, 10 multi (two passages), 8 unanswerable. The unanswerable ones stay close to the topic (AI Act high-risk rules, cookies, Cyber Resilience Act, Digital Services Act, national penalties, invoice retention, a specific Spanish fine, data localisation).
 
 Examples:
 - single (q01): "How quickly do we have to report a personal data breach to the data protection authority?" Expected: GDPR, Article 33.
@@ -320,13 +323,13 @@ Five questions failed by my grading (the judge also marked four of them as faile
 | q25 (fines) | Gave the Article 40(4) mechanism but not the amount, because GDPR Article 83 was never retrieved | retrieval miss |
 | q26 (data altruism consent) | Refused although Article 21(3) was retrieved; also made an unsupported claim about which law governs | wrong refusal |
 
-**Counts:** retrieval miss 3, wrong refusal 1, wrong answer from the right passage 1, unsupported claim 0 as the root cause (q26 also had one), bad test question 0.
+**Counts:** retrieval miss 3, wrong refusal 1, wrong answer from the right passage 1, unsupported claim as the root cause 0, bad test question 0.
 
 **What to fix first.** I would first make the agent search again before it gives up. Three of the five failures come from a passage that was not retrieved. The agent averages only 1.2 searches per question, even though rule 6 tells it to search again. Changing this means strengthening rule 6 so the agent searches separately for each part of a two-part question, and rewords its query once before refusing. It is the cheapest fix as it involves changing one prompt and needs no re-embedding. A next step could also be to retrieve more passages per search (e.g: k = 8 instead of 5)
 
 ## Decision
 
-It can help users look things up fast, but it should not have the final word. The evaluation has showed me that it is good at finding and citing the relevant article (every citation pointed to an article the search actually returned), and it refused all 8 questions the corpus could not answer, so it does not usually invent things. But it is not reliable enough to decide what a company must do. On the 29 answerable questions it got 24 right. Three times it wrongly said the documents do not cover the question, and twice it gave an answer that was incomplete (q25 left out the fine amount), which could be misleading. The test set is small (37 questions), and the tool covers only the GDPR, the Data Act and the Data Governance Act, with no national law, so it cannot say what is allowed in a particular country.
+It can help users look things up fast, but it should not have the final word. The evaluation has shown me that it is good at finding and citing the relevant article (every citation pointed to an article the search actually returned), and it refused all 8 questions the corpus could not answer, so it does not usually invent things. However, it is not reliable enough to decide what a company must do. On the 29 answerable questions it got 24 right. Three times it wrongly said the documents do not cover the question, and twice it gave an answer that was incomplete (q25 left out the fine amount), which could be misleading. The test set is small (37 questions), and the tool covers only the GDPR, the Data Act and the Data Governance Act, with no national law, so it cannot say what is allowed in a particular country.
 
 Safeguards I would require: (1) always show the cited articles next to the answer, and tell the user to read them before acting; (2) if the tool says the documents don’t cover a question, check somewhere else, it doesn’t mean there is no rule; (3) for questions about two laws or two parts, make the agent search each part, since that is where most failures were; (4) for fines, deadlines and obligations, a person needs to check the article text. 
 
