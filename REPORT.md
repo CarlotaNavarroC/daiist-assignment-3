@@ -23,8 +23,7 @@ A fourth document, the Free Flow of Non-Personal Data Regulation (2018/1807), wa
 
 ## Ingestion
 
-- **Extraction.** `index.py` downloads the EUR-Lex HTML and reads each article from its stable id (`art_1`, `art_2`, ...) with its title and chapter. Only the operative part is indexed (articles, no recitals). TODO (your reason, e.g. recitals are explanatory and non-binding, and compliance questions are about obligations; it also halves the embedding cost). I left out the recitals for
-two reasons. First, they only explain why the law was written and are not binding, while the questions users ask are about what they must do, and that is in the articles. Second, they roughly halve the size of the text, which keeps the corpus at about 67,000 words (well above the 50,000 minimum) and keeps the embedding cost within the free daily limit.
+- **Extraction.** `index.py` downloads the EUR-Lex HTML and reads each article from its stable id (`art_1`, `art_2`, ...) with its title and chapter. Only the operative part is indexed (articles, no recitals). I left out the recitals for two reasons. First, they only explain why the law was written and are not binding, while the questions users ask are about what they must do, and that is in the articles. Second, they roughly halve the size of the text, which keeps the corpus at about 67,000 words (well above the 50,000 minimum) and keeps the embedding cost within the free daily limit.
 - **One extraction problem fixed.** EUR-Lex lays out lists such as "(a) ... (b) ..." as HTML tables, and reading each cell separately split the letter from its text. The parser now reads each table row as one block and collapses whitespace, so every item stays together.
 - **Chunking, two designs.** `article`: one chunk per article, with the article title in the embedded text; articles over 350 words are split at paragraph boundaries (for example Article 4 of the GDPR becomes 8 parts). `fixed`: a sliding window of 200 words with 40 words of overlap that ignores structure.
 - **Chunk metadata:** `source`, `location` (e.g. "Article 33"), `locations` (every article a window touches), `title`, `chapter`, `part`, `parts`, `design`.
@@ -301,17 +300,17 @@ supported (1 or 0): is EVERY factual claim in the answer found in the RETRIEVED 
   - Paraphrase is fine. A claim that is true but appears nowhere in the passages counts as
     unsupported (0). A proper refusal counts as supported (1).
 ```
-TODO: say whether you agree with the rubric, and what you would change.
 
-**My grades:** all 37 answers graded by me before the judge ran (committed first). Mine: correct 32/37; supported 36/37.
 
-**Judge results:** correct 33/37 (single 17/19, multi 8/10, unanswerable 8/8); supported 35/37; unsupported answers 2.
+**My grades:** I graded all 37 answers myself before running the judge. I marked 32/37 as correct, and 36/37 as supported by the retrieved passages.
 
-**Agreement with my grades:** correct 36/37 (kappa 0.874); supported 36/37 (kappa 0.654). The kappa for supported is lower because I gave only one `supported = 0`, so a single disagreement moves it a lot; the sample is small. The disagreements: q25 (I marked it incorrect for missing the EUR 20 million / 4% amount, the judge accepted it) and q19 (judge marked it unsupported, I did not). Reasons are in `eval/judge_disagreements.csv`. In q13 the judge's verdict matched mine but its written reason was inconsistent with it. TODO: your reading of why they disagreed.
+**Judge results:** correct 33/37; supported 35/37.
+
+**Agreement with my grades:** On 37 answers, the judge and I gave the same correct label 36 times (kappa 0.874) and the same supported label 36 times (kappa 0.654). We differed on two answers. In q25 I marked it incorrect because it left out the EUR 20 million / 4% fine, and the judge accepted it. In q19 the judge marked it unsupported and I did not. Kappa is lower for supported because I gave only one 0, so a single disagreement counts a lot in a small sample. Reasons for each difference are in eval/judge_disagreements.csv.
 
 ## Failures
 
-Five questions failed by my grade or the judge's:
+Five questions failed by my grading (the judge also marked four of them as failed; it accepted q25).
 
 | Question | What happened | My cause |
 |---|---|---|
@@ -323,14 +322,18 @@ Five questions failed by my grade or the judge's:
 
 **Counts:** retrieval miss 3, wrong refusal 1, wrong answer from the right passage 1, unsupported claim 0 as the root cause (q26 also had one), bad test question 0.
 
-**What to fix first.** TODO (your decision). Evidence: three of the five failures start with retrieval, and two of them are questions needing two passages where a single search did not surface both. The agent averages only 1.2 searches per question although rule 6 tells it to search again.
+**What to fix first.** I would first make the agent search again before it gives up. Three of the five failures come from a passage that was not retrieved. The agent averages only 1.2 searches per question, even though rule 6 tells it to search again. Changing this means strengthening rule 6 so the agent searches separately for each part of a two-part question, and rewords its query once before refusing. It is the cheapest fix as it involves changing one prompt and needs no re-embedding. A next step could also be to retrieve more passages per search (e.g: k = 8 instead of 5)
 
 ## Decision
 
-TODO (your decision and reasoning): would you let users rely on it, for what, and with which safeguard? Facts to use: 8/8 correct refusals on unanswerable questions; 3 wrong refusals and 1 wrong answer on 29 answerable ones; every citation pointed to a retrieved article; the tool covers only these three regulations and no national law; small test set of 37.
+It can help users look things up fast, but it should not have the final word. The evaluation has showed me that it is good at finding and citing the relevant article (every citation pointed to an article the search actually returned), and it refused all 8 questions the corpus could not answer, so it does not usually invent things. But it is not reliable enough to decide what a company must do. On the 29 answerable questions it got 24 right. Three times it wrongly said the documents do not cover the question, and twice it gave an answer that was incomplete (q25 left out the fine amount), which could be misleading. The test set is small (37 questions), and the tool covers only the GDPR, the Data Act and the Data Governance Act, with no national law, so it cannot say what is allowed in a particular country.
+
+Safeguards I would require: (1) always show the cited articles next to the answer, and tell the user to read them before acting; (2) if the tool says the documents don’t cover a question, check somewhere else, it doesn’t mean there is no rule; (3) for questions about two laws or two parts, make the agent search each part, since that is where most failures were; (4) for fines, deadlines and obligations, a person needs to check the article text. 
 
 **Cost and latency per question:** about 5,258 input tokens and 186 output tokens on average, 8.0 seconds on average, 1.2 tool calls (model `gemini-3.5-flash-lite`).
 
 ## AI use
 
-TODO (check it is accurate and in your words). Facts: I used Claude to write the first versions of `index.py`, `server.py`, `agent.py`, `evaluate.py`, the first draft of `AGENTS.md`, the first draft of the 37 test questions and reference answers, and this report's scaffold. I chose the use case and corpus, reviewed and edited the code, rules and questions, chose the design, graded all 37 answers myself before the judge ran, classified the failures, and made the decision. Claude Code (Opus 5.5) was also used to run the subagent transcript; Gemini models run the agent and the judge.
+I used Claude to help me write the code and debug errors. Claude Code (Opus 5.5) was also used to run the subagent transcript; Gemini models run the agent and the judge.
+The following are my own: the use case, the corpus choice, the chunking and design decision, the refusal rules, the judge rubric, the 37 test questions, my grades of the answers, the analysis and the ship decision.
+
